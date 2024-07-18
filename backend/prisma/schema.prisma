@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                            Int                 @id @default(autoincrement())
+  name                          String
+  email                         String              @unique
+  profilePicture                String?
+  password                      String
+  post                          Posts[]             @relation("posts")
+  friends                       Int[]
+  like                          Like[]              @relation("likedbyuser")
+  comments                      Comment[]           @relation("commentedbyuser")
+  friendrequestsSent            FriendRequest[]     @relation("friendrequestSender")
+  friendrequestsReceived        FriendRequest[]     @relation("friendrequestArray")
+}
+
+model Posts {
+  id                            Int           @id @default(autoincrement())
+  caption                       String
+  cloudinaryUrl                 String
+  uploadedbyId                  Int
+  uploadedby                    User          @relation("posts", fields: [uploadedbyId], references: [id])
+  likes                         Like[]        @relation("likedpost")
+  comments                      Comment[]     @relation("commentedpost")
+}
+
+model Like {
+  id                            Int           @id @default(autoincrement())
+  userId                        Int
+  user                          User          @relation("likedbyuser", fields: [userId], references: [id])
+  postId                        Int
+  post                          Posts         @relation("likedpost", fields: [postId], references: [id])
+}
+
+model Comment {
+  id                            Int           @id @default(autoincrement())
+  userId                        Int
+  content                       String
+  user                          User          @relation("commentedbyuser", fields: [userId], references: [id])
+  postId                        Int
+  post                          Posts         @relation("commentedpost", fields: [postId], references: [id])
+}
+
+model FriendRequest {
+  id                            Int           @id @default(autoincrement())
+  userId                        Int
+  user                          User          @relation("friendrequestSender", fields: [userId], references: [id])
+  tobefriendId                  Int
+  friendId                      User          @relation("friendrequestArray", fields: [tobefriendId], references: [id])
+  status                        String
+}
+
+model FriendRequestAccept {
+  id                            Int           @id @default(autoincrement())
+  tobefriendId                  Int
+  status                        String
+  userId                        Int
+  requestId                     Int
+}
