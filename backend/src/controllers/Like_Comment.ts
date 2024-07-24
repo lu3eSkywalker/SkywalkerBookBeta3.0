@@ -55,7 +55,7 @@ export const createComment = async(req: Request, res: Response): Promise<void> =
         if(!parsedInput.success) {
             res.status(411).json({
                 error: parsedInput.error
-            })
+            }) 
             return;
         }
 

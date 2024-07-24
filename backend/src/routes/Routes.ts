@@ -4,6 +4,7 @@ import { login, signupUser } from '../controllers/Signup_Login';
 import { profilePicture, UploadLogic } from '../controllers/UploadLogic';
 import { createComment, getCommentsByPostId, getLikesbyPostId, getLikesbyUserId, likePost } from '../controllers/Like_Comment';
 import { friendRequestAccept, getAllPendingFriendRequests, getAllUsers, getPostbyId, getUserInfo, getPostOfUser, searchFriendRequests, sendFriendRequest } from '../controllers/Friends_Follow_Request';
+import { fetchChatIdByUserIds, fetchChats, fetchmessageByChatId } from '../controllers/Messaging_API';
 
 const router: express.Router = express.Router();
 
@@ -22,11 +23,16 @@ router.get("/getcommentbypostid/:id", getCommentsByPostId)
 router.get("/getlikesbypostid/:id", getLikesbyPostId)
 router.get("/getlikesbyuserid/:id/:postid", getLikesbyUserId);
 
+router.get("/getmessagebychatid/:chatId", fetchmessageByChatId);
+router.get("/fetchchatidbyuserids/:userId1/:userId2", fetchChatIdByUserIds);
+
 router.get('/getallusers', getAllUsers)
 
 router.post('/friendrequest', sendFriendRequest)
 router.post('/friendrequestaccept', friendRequestAccept)
 router.post('/searchfriendrequest', searchFriendRequests)
 router.post('/getallpendingrequest', getAllPendingFriendRequests)
+
+router.post("/fetchchats", fetchChats);
 
 export default router;
