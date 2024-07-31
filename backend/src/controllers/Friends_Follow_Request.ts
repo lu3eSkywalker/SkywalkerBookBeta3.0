@@ -5,6 +5,9 @@ dotenv.config();
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
+import { redis } from "../middlewares/redis";
+
+
 
 
 export const sendFriendRequest = async(req: Request, res: Response): Promise<void> => {
@@ -253,12 +256,23 @@ export const getPosts = async(req: Request, res: Response): Promise<void> => {
         });
     }
 }
-
 export const getPostOfUser = async(req: Request, res: Response): Promise<void> => {
     try {
         const userId: any = req.params.id;
-
         const id = parseInt(userId);
+
+        const key = `userPost:${id}`;
+        let redisUserPost = await redis.get(key);
+
+        if(redisUserPost) {
+            console.log("Get from cache");
+            res.status(200).json({
+                success: true,
+                data: JSON.parse(redisUserPost),
+                message: "Data Fetched from cache"
+            });
+            return;
+        }
 
         const posts = await prisma.user.findUnique({
             where: {
@@ -275,6 +289,8 @@ export const getPostOfUser = async(req: Request, res: Response): Promise<void> =
                 message: 'No Posts available'
             })
         }
+
+        await redis.setex(key, 600, JSON.stringify(posts));
 
         res.status(200).json({
             success: true,
@@ -312,46 +328,87 @@ export const getAllUsers = async(req: Request, res: Response): Promise<void> => 
     }
 }
 
-export const getPostbyId  = async(req: Request, res: Response): Promise<void> => {
+export const getPostbyId = async (req: Request, res: Response): Promise<void> => {
     try {
         const id = req.params.id;
-
         const postId = parseInt(id);
 
+        // Check if the ID is a valid number
+        if (isNaN(postId)) {
+            res.status(400).json({
+                success: false,
+                message: 'Invalid post ID'
+            });
+            return;
+        }
+
+        // Check cache first
+        const key = `post:${id}`;
+        let redisPost = await redis.get(key);
+        
+        if (redisPost) {
+            console.log("Get from cache");
+            res.status(200).json({
+                success: true,
+                data: JSON.parse(redisPost),
+                message: "Data fetched from cache"
+            });
+            return;
+        }
+
+        // Fetch from database if not in cache
         const post = await prisma.posts.findUnique({
             where: {
                 id: postId
             }
         });
 
-        if(!post) {
+        if (!post) {
             res.status(404).json({
                 success: false,
-                message: 'No Posts available'
-            })
+                message: 'Post not found'
+            });
+            return;
         }
 
+        // Cache the post
+        await redis.set(key, JSON.stringify(post));
+
+        // Send response
         res.status(200).json({
             success: true,
             data: post,
             message: "Data has been fetched"
-        })
-
-    }
-    catch (error) {
-        console.log("Error: ", error);
+        });
+    } catch (error) {
+        console.error("Error: ", error);
         res.status(500).json({
             success: false,
             message: "Internal server error"
         });
     }
-}
+};
+
 
 export const getUserInfo = async(req: Request, res: Response): Promise<void> => {
     try {
         const id = req.params.id;
 
         const userId = parseInt(id);
+        
+        //Check Cache first
+        const key = `userProfile: ${id}`;
+        let redisUserProfile = await redis.get(key);
+        
+        if (redisUserProfile) {
+            console.log("Getting from cache");
+            res.status(200).json({
+                success: true,
+                data: JSON.parse(redisUserProfile),
+                message: 'Data Fetched from cache'
+            });
+            return;
+        }
 
         const user = await prisma.user.findUnique({
             where: {
@@ -371,6 +428,9 @@ export const getUserInfo = async(req: Request, res: Response): Promise<void> => 
                 message: "User doesn't exist"
             })
         }
+
+        //Cache the UserProfile
+        await redis.setex(key, 600, JSON.stringify(user));
 
         res.status(200).json({
             success: true,

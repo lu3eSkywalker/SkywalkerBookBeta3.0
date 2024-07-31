@@ -25,7 +25,8 @@
     "swagger-ui-express": "^5.0.1",
     "ts-node-dev": "^2.0.0",
     "zod": "^3.22.5",
-    "cookie-parser": "^1.4.6"
+    "cookie-parser": "^1.4.6",
+    "ioredis": "^5.4.1"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
