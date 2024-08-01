@@ -7,6 +7,7 @@ import jwt, { Secret } from 'jsonwebtoken';
 
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
+import { redis } from "../middlewares/redis";
 
 const secretjwt: string = process.env.JWT_SECRET || ''
 
@@ -93,6 +94,19 @@ export const getCommentsByPostId = async(req: Request, res: Response): Promise<v
 
         const id = parseInt(postId);
 
+        const key = `comments: ${id}`;
+        let redisPostComment = await redis.get(key);
+
+        if(redisPostComment) {
+            console.log('Getting from cache');
+            res.status(200).json({
+                success: true,
+                data: JSON.parse(redisPostComment),
+                message: 'Data Fetched from cache'
+            });
+            return;
+        }
+
         const comments = await prisma.posts.findUnique({
             where: {
                 id: id,
@@ -108,6 +122,8 @@ export const getCommentsByPostId = async(req: Request, res: Response): Promise<v
                 message: "No Data Found"
             })
         }
+
+        await redis.setex(key, 600, JSON.stringify(comments));
 
         res.status(200).json({
             success: true,
@@ -133,6 +149,19 @@ export const getLikesbyPostId = async(req: Request, res: Response): Promise<void
 
         const id = parseInt(postId);
 
+        const key = `userProfile: ${id}`;
+        let redisPostLike = await redis.get(key);
+
+        if(redisPostLike) {
+            console.log('Getting from cache');
+            res.status(200).json({
+                success: true,
+                data: JSON.parse(redisPostLike),
+                message: 'Data Fetched from cache'
+            });
+            return;
+        }
+
         const likes = await prisma.posts.findUnique({
             where: {
                 id: id,
@@ -149,6 +178,8 @@ export const getLikesbyPostId = async(req: Request, res: Response): Promise<void
             });
             return;
         }
+
+        await redis.setex(key, 600, JSON.stringify(likes));
 
         res.status(200).json({
             success: true,
@@ -175,6 +206,19 @@ export const getLikesbyUserId = async(req: Request, res: Response): Promise<void
         const id = parseInt(userId);
         const postId = parseInt(postid);
 
+        const key = `userProfile: ${id}`;
+        let redisPostLikeByUserId = await redis.get(key);
+
+        if(redisPostLikeByUserId) {
+            console.log("Getting from cache");
+            res.status(200).json({
+                success: true,
+                data: JSON.parse(redisPostLikeByUserId),
+                message: 'Data Fetched from cache'
+            });
+            return;
+        }
+
         const likes = await prisma.like.findFirst({
             where: {
                 userId: id,
@@ -189,6 +233,8 @@ export const getLikesbyUserId = async(req: Request, res: Response): Promise<void
             })
             return;
         }
+
+        await redis.setex(key, 600, JSON.stringify(likes));
 
         res.status(200).json({
             success: true,

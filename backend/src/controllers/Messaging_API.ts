@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
+import { redis } from "../middlewares/redis";
 
 export const fetchChats = async(req: Request, res: Response): Promise<void> => {
     try {
@@ -36,11 +37,34 @@ export const fetchmessageByChatId = async(req: Request, res: Response): Promise<
 
         const id = parseInt(chatId);
 
+        const key = `messages: ${id}`;
+        let redisMessageByChatId = await redis.get(key);
+
+        if(redisMessageByChatId) {
+            console.log("Getting from cache");
+            res.status(200).json({
+                success: true,
+                data: JSON.parse(redisMessageByChatId),
+                message: 'Data Fetched from cache'
+            });
+            return;
+        }
+
         const userChat = await prisma.twoPersonChat.findMany({
             where: {
                 chatId: id
             }
         })
+
+        if(!userChat) {
+            res.status(404).json({
+                success: false,
+                message: "No Data Found"
+            });
+            return;
+        }
+
+        await redis.setex(key, 600, JSON.stringify(userChat));
 
         res.status(200).json({
             success: true,

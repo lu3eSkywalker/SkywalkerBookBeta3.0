@@ -7,9 +7,6 @@ const prisma = new PrismaClient();
 
 import { redis } from "../middlewares/redis";
 
-
-
-
 export const sendFriendRequest = async(req: Request, res: Response): Promise<void> => {
     try {
         const {userId, friendId, status} = req.body;
@@ -256,6 +253,7 @@ export const getPosts = async(req: Request, res: Response): Promise<void> => {
         });
     }
 }
+
 export const getPostOfUser = async(req: Request, res: Response): Promise<void> => {
     try {
         const userId: any = req.params.id;
@@ -310,7 +308,24 @@ export const getPostOfUser = async(req: Request, res: Response): Promise<void> =
 export const getAllUsers = async(req: Request, res: Response): Promise<void> => {
     try {
 
+        
+        const key = `userProfile`;
+        let redisAllUsers = await redis.get(key);
+
+        if(redisAllUsers) {
+            console.log("Getting from cache");
+            res.status(200).json({
+                success: true,
+                data: JSON.parse(redisAllUsers),
+                message: 'Data Fetched from cache'
+            });
+            return;
+        }
+
+
         const user = await prisma.user.findMany();
+
+        await redis.setex(key, 600, JSON.stringify(user));
 
         res.status(200).json({
             success: true,
