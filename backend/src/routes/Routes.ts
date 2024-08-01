@@ -5,11 +5,13 @@ import { profilePicture, UploadLogic } from '../controllers/UploadLogic';
 import { createComment, getCommentsByPostId, getLikesbyPostId, getLikesbyUserId, likePost } from '../controllers/Like_Comment';
 import { friendRequestAccept, getAllPendingFriendRequests, getAllUsers, getPostbyId, getUserInfo, getPostOfUser, searchFriendRequests, sendFriendRequest } from '../controllers/Friends_Follow_Request';
 import { fetchChatIdByUserIds, fetchChats, fetchmessageByChatId } from '../controllers/Messaging_API';
+import { rateLimiter2 } from '../middlewares/redis';
+
 
 const router: express.Router = express.Router();
 
 router.post('/signup', signupUser)
-router.post('/upload', upload.single('image'), UploadLogic)
+router.post('/upload', upload.single('image'), rateLimiter2({ limit: 5, timer: 300, key: "image"}), UploadLogic);
 router.post('/uploadprofilepic', upload.single('image'), profilePicture)
 router.post('/login', login)
 router.post('/like', likePost)
@@ -28,7 +30,7 @@ router.get("/fetchchatidbyuserids/:userId1/:userId2", fetchChatIdByUserIds);
 
 router.get('/getallusers', getAllUsers)
 
-router.post('/friendrequest', sendFriendRequest)
+router.post('/friendrequest', rateLimiter2({ limit: 20, timer: 600, key: 'friendrequest'}), sendFriendRequest)
 router.post('/friendrequestaccept', friendRequestAccept)
 router.post('/searchfriendrequest', searchFriendRequests)
 router.post('/getallpendingrequest', getAllPendingFriendRequests)

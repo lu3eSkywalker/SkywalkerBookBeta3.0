@@ -4,9 +4,11 @@ import bcrypt from 'bcrypt';
 import dotenv, { parse } from 'dotenv';
 dotenv.config();
 import jwt, { Secret } from 'jsonwebtoken';
+import { rateLimiter } from '../middlewares/redis';
 
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
+
 
 const secretjwt: string = process.env.JWT_SECRET || ''
 
@@ -61,7 +63,6 @@ const UserLoginSchema = z.object({
     email: z.string().email(),
     password: z.string().min(5),
 })
-
 export const login = async(req: Request<{ email: string, password: string}>, res: Response): Promise<void> => {
     try {
         const parsedInput = UserLoginSchema.safeParse(req.body);
@@ -107,13 +108,21 @@ export const login = async(req: Request<{ email: string, password: string}>, res
                 message: 'Logged in successfully'
             });
         } else {
-            res.status(401).json({
-                success: false,
-                message: "Password Incorrect"
-            });
-            return;
-        }
+            const clientIp = (req.headers["x-forwarded-for"] || req.socket.remoteAddress) as string;
+            const { rateLimited, timeRemaining } = await rateLimiter({ key: 'login', limit: 5, timer: 60 }, clientIp);
 
+            if(rateLimited) {
+                res.status(429).json({
+                    success: false,
+                    message: `Too many incorrect login requests, Please try again later after ${timeRemaining} seconds`
+                })
+            } else {
+                res.status(401).json({
+                    success: false,
+                    message: "Password Incorrect"
+                });
+            }
+        }
     }
     catch(error) {
         console.log('Error: ', error)
