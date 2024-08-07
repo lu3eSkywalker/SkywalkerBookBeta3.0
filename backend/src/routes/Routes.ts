@@ -7,18 +7,23 @@ import { friendRequestAccept, getAllPendingFriendRequests, getAllUsers, getPostb
 import { fetchChatIdByUserIds, fetchChats, fetchmessageByChatId } from '../controllers/Messaging_API';
 import { rateLimiter2 } from '../middlewares/redis';
 
+import client from 'prom-client';
+import { requestCountMiddleware, requestDurationMiddleware } from '../middlewares/prometheus';
 
 const router: express.Router = express.Router();
 
-router.post('/signup', signupUser)
-router.post('/upload', upload.single('image'), rateLimiter2({ limit: 5, timer: 300, key: "image"}), UploadLogic);
-router.post('/uploadprofilepic', upload.single('image'), profilePicture)
-router.post('/login', login)
-router.post('/like', likePost)
-router.post('/comment', createComment)
+const app = express();
 
-router.get('/getuserpost/:id', getPostOfUser)
-router.get('/getpost/:id', getPostbyId)
+router.post('/signup', requestCountMiddleware, requestDurationMiddleware('/signup'), signupUser)
+router.post('/upload', upload.single('image'), rateLimiter2({ limit: 5, timer: 300, key: "image"}), requestCountMiddleware, requestDurationMiddleware('/upload'), UploadLogic);
+router.post('/uploadprofilepic', upload.single('image'), profilePicture)
+router.post('/login', requestCountMiddleware, requestDurationMiddleware('login'), login)
+
+router.post('/like', requestCountMiddleware, requestDurationMiddleware('/like'), likePost)
+router.post('/comment', requestCountMiddleware, requestDurationMiddleware('/comment'), createComment)
+
+router.get('/getuserpost/:id', requestCountMiddleware, requestDurationMiddleware('/getuserpost/:id'), getPostOfUser)
+router.get('/getpost/:id', requestCountMiddleware, requestCountMiddleware, requestDurationMiddleware('/getpost/:id'),  getPostbyId)
 router.get('/getuserinfo/:id', getUserInfo)
 
 router.get("/getcommentbypostid/:id", getCommentsByPostId)
@@ -28,9 +33,9 @@ router.get("/getlikesbyuserid/:id/:postid", getLikesbyUserId);
 router.get("/getmessagebychatid/:chatId", fetchmessageByChatId);
 router.get("/fetchchatidbyuserids/:userId1/:userId2", fetchChatIdByUserIds);
 
-router.get('/getallusers', getAllUsers)
+router.get('/getallusers', requestDurationMiddleware('getAllUsers'), getAllUsers)
 
-router.post('/friendrequest', rateLimiter2({ limit: 20, timer: 600, key: 'friendrequest'}), sendFriendRequest)
+router.post('/friendrequest', rateLimiter2({ limit: 20, timer: 600, key: 'friendrequest'}), requestCountMiddleware, sendFriendRequest)
 router.post('/friendrequestaccept', friendRequestAccept)
 router.post('/searchfriendrequest', searchFriendRequests)
 router.post('/getallpendingrequest', getAllPendingFriendRequests)

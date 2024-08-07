@@ -4,6 +4,8 @@ import { Server } from "socket.io";
 import { PrismaClient } from '@prisma/client';
 import { createServer } from "http";
 import cors from 'cors';
+import client from 'prom-client';
+import { requestCountMiddleware } from './middlewares/prometheus';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -14,6 +16,7 @@ app.use(cors({
     methods: ["GET", "POST"],
     credentials: true,
 }));
+
 
 const server = createServer(app);
 app.use('/api/v1', skywalkerBookRoutes);
@@ -39,6 +42,12 @@ const dbConnect = async () => {
 };
 
 dbConnect();
+
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', client.register.contentType);
+    res.end(await client.register.metrics());
+});
+
 
 app.post('/messages', async (req, res) => {
     const { content, chatId, senderId } = req.body;
