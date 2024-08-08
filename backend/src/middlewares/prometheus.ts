@@ -38,3 +38,10 @@ export function requestDurationMiddleware(route: any) {
         next();
     }
 }
+
+export const activeUserGauge = new Gauge({
+    name: 'active_users',
+    help: 'Number of active users',
+});
+
+activeUserGauge.set(0);

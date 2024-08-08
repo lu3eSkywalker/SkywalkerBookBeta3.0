@@ -93,3 +93,9 @@ model Chat {
   user2                         User          @relation("User2Chats", fields: [user2Id], references: [id])
   messages                      TwoPersonChat[]
 }
+
+model Blacklistedtoken {
+  id                            Int           @id @default(autoincrement())
+  token                         String
+  createdAt                     DateTime
+}

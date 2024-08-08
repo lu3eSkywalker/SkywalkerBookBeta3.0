@@ -1,6 +1,6 @@
 import express from 'express';
 import upload from '../middlewares/multer';
-import { login, signupUser } from '../controllers/Signup_Login';
+import { login, logout, signupUser } from '../controllers/Signup_Login';
 import { profilePicture, UploadLogic } from '../controllers/UploadLogic';
 import { createComment, getCommentsByPostId, getLikesbyPostId, getLikesbyUserId, likePost } from '../controllers/Like_Comment';
 import { friendRequestAccept, getAllPendingFriendRequests, getAllUsers, getPostbyId, getUserInfo, getPostOfUser, searchFriendRequests, sendFriendRequest } from '../controllers/Friends_Follow_Request';
@@ -18,6 +18,7 @@ router.post('/signup', requestCountMiddleware, requestDurationMiddleware('/signu
 router.post('/upload', upload.single('image'), rateLimiter2({ limit: 5, timer: 300, key: "image"}), requestCountMiddleware, requestDurationMiddleware('/upload'), UploadLogic);
 router.post('/uploadprofilepic', upload.single('image'), profilePicture)
 router.post('/login', requestCountMiddleware, requestDurationMiddleware('login'), login)
+router.post('/logout', logout);
 
 router.post('/like', requestCountMiddleware, requestDurationMiddleware('/like'), likePost)
 router.post('/comment', requestCountMiddleware, requestDurationMiddleware('/comment'), createComment)

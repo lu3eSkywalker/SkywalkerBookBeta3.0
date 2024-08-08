@@ -7,6 +7,7 @@ import jwt, { Secret } from 'jsonwebtoken';
 import { rateLimiter } from '../middlewares/redis';
 
 import { PrismaClient } from '@prisma/client';
+import { activeUserGauge } from "../middlewares/prometheus";
 const prisma = new PrismaClient();
 
 
@@ -63,6 +64,7 @@ const UserLoginSchema = z.object({
     email: z.string().email(),
     password: z.string().min(5),
 })
+
 export const login = async(req: Request<{ email: string, password: string}>, res: Response): Promise<void> => {
     try {
         const parsedInput = UserLoginSchema.safeParse(req.body);
@@ -101,6 +103,8 @@ export const login = async(req: Request<{ email: string, password: string}>, res
         if(compare) {
             const token = jwt.sign({payload}, secretjwt, { expiresIn: "24hr"} )
 
+            activeUserGauge.inc();
+
             res.status(200).json({
                 success: true,
                 data: user,
@@ -129,6 +133,34 @@ export const login = async(req: Request<{ email: string, password: string}>, res
         res.status(500).json({
             success: false,
             message: 'Internal Server Error',
+        })
+    }
+}
+
+export const logout = async(req: Request, res: Response): Promise<void> => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1] ?? '';
+
+        await prisma.blacklistedtoken.create({
+            data: {
+                token: token,
+                createdAt: new Date()
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'User Logged out successfully'
+        })
+
+        activeUserGauge.dec();
+
+    }
+    catch(error) {
+        console.log("Error: ", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server Error"
         })
     }
 }
